@@ -1,0 +1,4 @@
+name = Delete comments
+description = Delete all comments from a node
+package = Delete comments
+core = 7.x

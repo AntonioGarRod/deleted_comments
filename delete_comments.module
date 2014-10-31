@@ -1,0 +1,71 @@
+<?php
+
+/**
+ * Implementation of hook_permission
+ */
+function delete_comments_permission() {
+  return array(
+    'access delete comments page' => array(
+      'title' => t('Delete comments'),
+      'description' => t('Delete all comments from one node'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function delete_comments_menu() {
+  $items = array();
+  $items['admin/config/delete_comments'] = array(
+    'title' => 'Delete Comments',
+    'description' => 'Delete all comments from one node',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('delete_comments_form'),
+    'access arguments' => array('access delete comments page'),
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+function delete_comments_form($form, &$form_state) {
+  $form['values'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Insert Node ID'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Delete comments from this node'),
+  );
+
+  return $form;
+}
+
+function delete_comments_form_submit($form, &$form_state) {
+  $result = db_select('comment', 'c')
+      ->fields('c')
+      ->condition('nid', $form['values']['#value'])
+      ->execute();
+
+  $deleted_files = 0;
+
+  foreach ($result as $value) {
+    $result_fdcb = db_delete('field_data_comment_body')
+        ->condition('entity_id', $value->cid)
+        ->execute();
+    $result_frcb = db_delete('field_revision_comment_body')
+        ->condition('entity_id', $value->cid)
+        ->execute();
+    $deleted_files = $deleted_files + $result_fdcb + $result_frcb;
+  }
+
+  if ($deleted_files == 0) {
+    $result = db_delete('comment')
+        ->condition('nid', $form['values']['#value'])
+        ->execute();
+  }
+
+  drupal_set_message($deleted_files . t(' comments deleted from node ') . $form['values']['#value']);
+}
